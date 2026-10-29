@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded live WebKit worker-port checks, using a disposable hidden Search.
 
-Build Search.app first (on Intel, copy build/intel/Search.app to build/Search.app)
+Build Search.app first (on Intel, copy build/intel/Search.app to build/Cercador.app)
 then run: python3 Tests/ExtensionWorkerRecovery/live.py
 
 Uses split_view's isolated SEARCH_PROBE lifecycle and the existing bench

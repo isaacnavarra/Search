@@ -14,9 +14,9 @@ import Security
 /// (8 Oct 2026): with it off, none of it shows or runs — no Settings page, no
 /// menu items or shortcuts, no line on the welcome or What's New cards — and
 /// a setting left on by a test build reads as off. The code stays; this is
-/// the one line that brings it back.
+/// the one line that brings it back — and Cercador, the fork, brings it back.
 enum AI {
-    static let shipped = false
+    static let shipped = true
 }
 
 /// Where the answers come from.
@@ -74,7 +74,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
     var defaultModel: String {
         switch self {
         case .thisMac: return AIEngine.model.name
-        case .anthropic: return "claude-haiku-4-5"
+        case .anthropic: return "claude-haiku-5-5"
         case .openAI: return "gpt-5.4-mini"
         case .gemini: return "gemini-3.8-flash"
         case .openRouter: return "google/gemini-3.8-flash"
@@ -110,7 +110,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
 enum AIKeys {
     enum Saved { case kept, unavailable, failed }
 
-    private static let service = "com.officecommun.search.ai"
+    private static let service = "cat.isaac.cercador.ai"
     /// A test run's, by account, gone when it quits.
     private static var rehearsal: [String: String] = [:]
 
@@ -118,18 +118,25 @@ enum AIKeys {
 
     private static func query(_ provider: AIProvider) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
-         kSecUseDataProtectionKeychain as String: true,
+         kSecUseDataProtectionKeychain as String: protected,
          kSecAttrService as String: service,
          kSecAttrAccount as String: account(provider)]
     }
 
-    /// Whether a key can be kept at all by this copy of Search.
-    static var available: Bool {
-        if Store.testing { return true }
-        var asked = query(.anthropic)
-        asked[kSecReturnAttributes as String] = true
+    /// Whether this copy has Search's access group. Cercador, built here
+    /// without Office Commun's provisioning profile, hasn't: its keys go in
+    /// the login keychain instead, as Vault's passwords do — readable by this
+    /// app's own signature, which macOS asks about again after a new build.
+    private static let protected: Bool = {
+        let asked: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecUseDataProtectionKeychain as String: true,
+                                    kSecAttrService as String: service,
+                                    kSecReturnAttributes as String: true]
         return SecItemCopyMatching(asked as CFDictionary, nil) != errSecMissingEntitlement
-    }
+    }()
+
+    /// Whether a key can be kept at all by this copy of Search.
+    static var available: Bool { true }
 
     static func save(_ key: String, for provider: AIProvider) -> Saved {
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -141,9 +148,9 @@ enum AIKeys {
         SecItemDelete(query(provider) as CFDictionary)
         var item = query(provider)
         item[kSecValueData as String] = Data(key.utf8)
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        if protected { item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly }
         item[kSecAttrSynchronizable as String] = false
-        item[kSecAttrLabel as String] = "Search — \(provider.name) key"
+        item[kSecAttrLabel as String] = "Cercador — \(provider.name) key"
         // The last four, to tell keys apart in Settings without reading one.
         item[kSecAttrComment as String] = String(key.suffix(4))
         switch SecItemAdd(item as CFDictionary, nil) {

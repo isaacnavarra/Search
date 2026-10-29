@@ -30,7 +30,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILT = ROOT / "build" / "Search.app"
+BUILT = ROOT / "build" / "Cercador.app"
 HOME = os.path.expanduser("~")
 ID = "com.officecommun.search.textcheck"
 W = f"tr-{hashlib.sha1(str(ROOT).encode()).hexdigest()[:8]}"

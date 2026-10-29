@@ -29,6 +29,11 @@ import Security
 final class Updater: ObservableObject {
     static let shared = Updater()
 
+    /// Cercador, the fork, never looks at Office Commun's feed: a newer build
+    /// there is Search, not this, and it is had by merging upstream and
+    /// building again. A test run pointed at a feed of its own still checks.
+    static let enabled = false
+
     /// Where the file lives. SEARCH_FEED, for a test run, points somewhere
     /// else — and is the only way plain http is accepted, so a build that
     /// was not handed the variable only ever listens to the real site.
@@ -133,6 +138,7 @@ final class Updater: ObservableObject {
     func checkIfDue(then say: @escaping (String) -> Void) {
         self.say = say
         Swap.sweep()
+        guard Updater.enabled || Updater.overridden else { return }
         // And again every hour for as long as the app is up — a browser that
         // is left open for a week would otherwise never look.
         if clock == nil {
@@ -166,6 +172,10 @@ final class Updater: ObservableObject {
             return
         default: break
         }
+        guard Updater.enabled || Updater.overridden else {
+            say?("Cercador updates by building it again from its source")
+            return
+        }
         guard !checking else { return }
         say?("Checking for updates…")
         check { [weak self] found in
@@ -179,6 +189,7 @@ final class Updater: ObservableObject {
     /// names, or nil when this is the latest; what becomes of it after that
     /// is said through the line handed to `checkIfDue`.
     func check(then done: @escaping (Release?) -> Void) {
+        guard Updater.enabled || Updater.overridden else { done(nil); return }
         guard !checking else { return }
         checking = true
         Task { [weak self] in
